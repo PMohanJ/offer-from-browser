@@ -1,0 +1,50 @@
+v=0
+o=- 4209932001143942078 2 IN IP4 127.0.0.1
+s=-
+t=0 0
+a=group:BUNDLE video0 audio1 application2
+a=msid-semantic: WMS
+m=video 9 UDP/TLS/RTP/SAVPF 123 97
+c=IN IP4 0.0.0.0
+a=rtcp:9 IN IP4 0.0.0.0
+a=ice-ufrag:RsTB
+a=ice-pwd:ewDJi0S1OO5Hki62pxACiRGO
+a=ice-options:trickle
+a=fingerprint:sha-256 31:6C:D9:2C:C1:72:29:57:52:AE:34:07:7C:F6:D3:55:D1:1D:CC:3B:EA:20:A1:0A:17:EA:F9:F9:A9:E9:5F:A0
+a=setup:active
+a=mid:video0
+a=recvonly
+a=rtcp-mux
+a=rtcp-rsize
+a=rtpmap:123 H264/90000
+a=rtcp-fb:123 transport-cc
+a=rtcp-fb:123 ccm fir
+a=rtcp-fb:123 nack
+a=rtcp-fb:123 nack pli
+a=fmtp:123 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
+a=rtpmap:97 rtx/90000
+a=fmtp:97 apt=123;rtx-time=125
+m=audio 9 UDP/TLS/RTP/SAVPF 96
+c=IN IP4 0.0.0.0
+a=rtcp:9 IN IP4 0.0.0.0
+a=ice-ufrag:RsTB
+a=ice-pwd:ewDJi0S1OO5Hki62pxACiRGO
+a=ice-options:trickle
+a=fingerprint:sha-256 31:6C:D9:2C:C1:72:29:57:52:AE:34:07:7C:F6:D3:55:D1:1D:CC:3B:EA:20:A1:0A:17:EA:F9:F9:A9:E9:5F:A0
+a=setup:active
+a=mid:audio1
+a=recvonly
+a=rtcp-mux
+a=rtpmap:96 OPUS/48000/2
+a=rtcp-fb:96 transport-cc
+a=fmtp:96 minptime=10;stereo=1;useinbandfec=1
+m=application 9 UDP/DTLS/SCTP webrtc-datachannel
+c=IN IP4 0.0.0.0
+a=ice-ufrag:RsTB
+a=ice-pwd:ewDJi0S1OO5Hki62pxACiRGO
+a=ice-options:trickle
+a=fingerprint:sha-256 31:6C:D9:2C:C1:72:29:57:52:AE:34:07:7C:F6:D3:55:D1:1D:CC:3B:EA:20:A1:0A:17:EA:F9:F9:A9:E9:5F:A0
+a=setup:active
+a=mid:application2
+a=sctp-port:5000
+

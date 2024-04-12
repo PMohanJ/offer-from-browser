@@ -1,0 +1,19 @@
+v=0
+o=- 6225321236310114531 2 IN IP4 0.0.0.0
+s=-
+t=0 0
+a=group:BUNDLE 0
+m=video 9 UDP/TLS/RTP/SAVPF 106
+c=IN IP4 0.0.0.0
+a=ice-ufrag:YwJXLdLBMtr1jqoXIu5I9XII+KN+eooe
+a=ice-pwd:6hc6fBeSr1sY0GEbyqAfPuUrghbEMcrc
+a=mid:0
+a=rtcp-mux
+a=setup:active
+a=rtpmap:106 H264/90000
+a=rtcp-fb:106 nack pli
+a=rtcp-fb:106 ccm fir
+a=rtcp-fb:106 transport-cc
+a=fmtp:106 packetization-mode=1;level-asymmetry-allowed=1
+a=recvonly
+a=fingerprint:sha-256 4F:A0:00:7E:D9:E9:0C:10:9A:E8:C6:2F:A8:8E:2B:67:BC:EB:C3:D2:67:D9:E2:F4:0A:FA:9E:89:73:43:B0:01
