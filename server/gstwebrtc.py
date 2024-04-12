@@ -172,9 +172,7 @@ class GSTWebRTCApp:
     #     promise = Gst.Promise.new()
     #     self.webrtcbin.emit('set-remote-description', answer, promise)
     #     promise.interrupt()
-        
-    
-    def __generate_answer(self, promise):
+    def __generate_answer_munged(self, promise):
         
         reply = promise.get_reply()
         answer = reply.get_value("answer")
@@ -196,6 +194,29 @@ class GSTWebRTCApp:
         promise.interrupt()
         
         # firefox requires profile-level-id for 97 payload
+        # if 'profile-level-id' not in sdp_text:
+        #     logger.warning("injecting profile-level-id to SDP")
+        #     sdp_text = sdp_text.replace('level-asymmetry-allowed=1', 'profile-level-id=42e01f;level-asymmetry-allowed=1')
+
+        logger.info("Sending the answer to remote PEER")
+        
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(self.on_sdp('answer', sdp_text))
+    
+    def __generate_answer(self, promise):
+        reply = promise.get_reply()
+        answer = reply.get_value("answer")
+
+        logger.info("Setting local description")
+        sdp_text = answer.sdp.as_text()
+
+        promise = Gst.Promise.new()
+        self.webrtcbin.emit('set-local-description', answer, promise)
+        promise.interrupt()
+
+        sdp_text = answer.sdp.as_text()
+        
+        # firefox requires profile-level-id for 97 payload (seen in offer SDP of firefox)
         # if 'profile-level-id' not in sdp_text:
         #     logger.warning("injecting profile-level-id to SDP")
         #     sdp_text = sdp_text.replace('level-asymmetry-allowed=1', 'profile-level-id=42e01f;level-asymmetry-allowed=1')
