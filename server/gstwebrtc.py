@@ -106,6 +106,8 @@ class GSTWebRTCApp:
     
         self.webrtcbin.connect('pad-added', lambda webrtcbin, pad: self.handle_webcam_stream(webrtcbin, pad))
 
+       # self.webrtcbin.connect('on-new-transceiver', lambda webrtcbin, candidate: self.transceiver(webrtcbin, candidate))
+
         # Add STUN server
         # TODO: figure out how to add more than 1 stun server.
         if self.stun_servers:
@@ -142,84 +144,40 @@ class GSTWebRTCApp:
 
         # if self.encoder.startswith("vp"):
         #     required.append("vpx")
-
+        logger.info("required plugins: " + str(required))
         missing = list(
             filter(lambda p: Gst.Registry.get().find_plugin(p) is None, required))
         if missing:
             raise GSTWebRTCAppError('Missing gstreamer plugins:', missing)
-
-    # def set_sdp(self, sdp_type, sdp):
-    #     """Sets remote SDP received by peer.
-
-    #     Arguments:
-    #         sdp_type {string} -- type of sdp, offer or answer
-    #         sdp {object} -- SDP object
-
-    #     Raises:
-    #         GSTWebRTCAppError -- thrown if SDP is recevied before session has been started.
-    #         GSTWebRTCAppError -- thrown if SDP type is not 'answer', this script initiates the call, not the peer.
-    #     """
-
-    #     if not self.webrtcbin:
-    #         raise GSTWebRTCAppError('Received SDP before session started')
-
-    #     if sdp_type != 'answer':
-    #         raise GSTWebRTCAppError('ERROR: sdp type was not "answer"')
-
-    #     _, sdpmsg = GstSdp.SDPMessage.new_from_text(sdp)
-    #     answer = GstWebRTC.WebRTCSessionDescription.new(
-    #         GstWebRTC.WebRTCSDPType.ANSWER, sdpmsg)
-    #     promise = Gst.Promise.new()
-    #     self.webrtcbin.emit('set-remote-description', answer, promise)
-    #     promise.interrupt()
-    def __generate_answer_munged(self, promise):
-        
-        reply = promise.get_reply()
-        answer = reply.get_value("answer")
-
-        logger.info("Setting local description")
-        sdp_text = answer.sdp.as_text()
-        logger.info("Answer SDP before munged: " + str(sdp_text))
-
-        if "rtpmap:107" not in sdp_text:
-            sdp_text = sdp_text.replace("level-asymmetry-allowed=1", "level-asymmetry-allowed=1\na=rtpmap:107 rtx/90000\na=fmtp:107 apt=106")
-            sdp_text = sdp_text.replace("video 9 UDP/TLS/RTP/SAVPF 106", "video 9 UDP/TLS/RTP/SAVPF 106 107")
-
-        logger.info("Answer after munged: " + str(sdp_text))
-        _, answer_sdp = GstSdp.SDPMessage.new_from_text(sdp_text)
-        answer_munged = GstWebRTC.WebRTCSessionDescription.new(GstWebRTC.WebRTCSDPType.ANSWER, answer_sdp)
-        
-        promise = Gst.Promise.new()
-        self.webrtcbin.emit('set-local-description', answer_munged, promise)
-        promise.interrupt()
-        
-        # firefox requires profile-level-id for 97 payload
-        # if 'profile-level-id' not in sdp_text:
-        #     logger.warning("injecting profile-level-id to SDP")
-        #     sdp_text = sdp_text.replace('level-asymmetry-allowed=1', 'profile-level-id=42e01f;level-asymmetry-allowed=1')
-
-        logger.info("Sending the answer to remote PEER")
-        
-        loop = asyncio.new_event_loop()
-        loop.run_until_complete(self.on_sdp('answer', sdp_text))
     
     def __generate_answer(self, promise):
         reply = promise.get_reply()
         answer = reply.get_value("answer")
 
         logger.info("Setting local description")
-        
+
         promise = Gst.Promise.new()
         self.webrtcbin.emit('set-local-description', answer, promise)
         promise.interrupt()
 
         sdp_text = answer.sdp.as_text()
-        
-        # firefox requires profile-level-id for 97 payload (seen in offer SDP of firefox)
-        # if 'profile-level-id' not in sdp_text:
-        #     logger.warning("injecting profile-level-id to SDP")
-        #     sdp_text = sdp_text.replace('level-asymmetry-allowed=1', 'profile-level-id=42e01f;level-asymmetry-allowed=1')
+        logger.info("SDP Answer from server before munged: "+ str(sdp_text))
 
+        if 'rtx-time' not in sdp_text:
+            logger.warning("injecting rtx-time to SDP")
+            sdp_text = re.sub(r'(apt=\d+)', r'\1;rtx-time=125', sdp_text)
+        elif 'rtx-time=125' not in sdp_text:
+            logger.warning("injecting modified rtx-time to SDP")
+            sdp_text = re.sub(r'rtx-time=\d+', r'rtx-time=125', sdp_text)
+        # x264
+        if 'profile-level-id' not in sdp_text:
+            logger.warning("injecting profile-level-id to SDP")
+            sdp_text = sdp_text.replace('packetization-mode=1', 'profile-level-id=42e01f;packetization-mode=1')
+        if 'level-asymmetry-allowed' not in sdp_text:
+            logger.warning("injecting level-asymmetry-allowed to SDP")
+            sdp_text = sdp_text.replace('packetization-mode=1', 'level-asymmetry-allowed=1;packetization-mode=1')
+
+        logger.info("SDP Answer from server after munged: "+ str(sdp_text))
         logger.info("Sending the answer to remote PEER")
         
         loop = asyncio.new_event_loop()
@@ -342,6 +300,27 @@ class GSTWebRTCApp:
         loop = asyncio.new_event_loop()
         loop.run_until_complete(self.on_ice(mlineindex, candidate))
     
+    def transceiver(self, webrtcbin, candidate):
+        logger.info(candidate)
+        self.print_transceiver_props(candidate)        
+    
+    def print_transceiver_props(self, candidate):
+        logger.info("Printing on-new-transceiver")
+        logger.info("Codec Preferences:" + str(candidate.props.codec_preferences))
+        logger.info("Current Direction:" + str(candidate.props.current_direction.value_nick))
+        logger.info("Direction:" + str(candidate.props.direction.value_nick))
+        logger.info("Kind:" + str(candidate.props.kind.value_nick))
+        logger.info("MID:" + str(candidate.props.mid))
+        logger.info("MLine Index:" + str(candidate.props.mlineindex))
+
+        self.print_transceiver_state(candidate)
+        logger.info("Sender:" + str(candidate.props.sender))
+
+    def print_transceiver_state(self, candidate):
+        receiverObj = candidate.props.receiver
+        transportObjofReceiverObj = receiverObj.props.transport
+        receiverObjTransportStatevalue = transportObjofReceiverObj.props.state.value_nick
+        logger.info("Receiver Obj Transport State: " + str(receiverObjTransportStatevalue))
 
     def build_video_pipeline(self):
         """As the webrtcbin needs to know codecs it can support beforehand for generating SDP. So when streaming 
@@ -361,7 +340,8 @@ class GSTWebRTCApp:
         codec_caps.set_value("clock-rate", 90000)
         codec_caps.set_value("profile", "constrained-baseline")
 
-        # add the transceiver
+        # add the transceivernput:There's a mismatch; the columns could be misaligned with headers
+
         self.webrtcbin.emit("add-transceiver", GstWebRTC.WebRTCRTPTransceiverDirection.RECVONLY, codec_caps)
 
     def handle_webcam_stream(self, webrtcbin, pad):
@@ -397,6 +377,9 @@ class GSTWebRTCApp:
         if res.value_name != 'GST_STATE_CHANGE_SUCCESS':
             raise GSTWebRTCAppError(
                 "Failed to transition pipeline to PLAYING: %s" % res)
+        
+        transceiver = self.webrtcbin.emit("get-transceiver", 0)
+        transceiver.set_property("do-nack", True)
 
         logger.info("pipeline started")
 
