@@ -208,8 +208,7 @@ class GSTWebRTCApp:
         answer = reply.get_value("answer")
 
         logger.info("Setting local description")
-        sdp_text = answer.sdp.as_text()
-
+        
         promise = Gst.Promise.new()
         self.webrtcbin.emit('set-local-description', answer, promise)
         promise.interrupt()
